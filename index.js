@@ -25,6 +25,10 @@ var eSpeed = 5;
 var enemies = [];
 var speedInterval = 10000;
 
+var plus100s = [];
+var explosions = [];
+var colors = ["red", "orange", "yellow", "blue", "blueviolet", "violet", "mediumspringgreen", "coral"];
+
 window.setInterval(spawnEnemy, enemyInterval);
 window.setInterval(speedUp, speedInterval);
 
@@ -56,6 +60,7 @@ function drawPlayer() {
 	ctx.rect(px + ((pWidth / 2) - (cannonWidth / 2)), py - cannonHeight, cannonWidth, cannonHeight);
 	ctx.fillStyle = "white";
 	ctx.fill();
+	ctx.stroke();
 
 	if(leftPressed) {
 		if(px >= 0) {
@@ -107,6 +112,7 @@ function drawLasers() {
 		ctx.rect(laser.x, laser.y, lWidth, lHeight);
 		ctx.fillStyle = "aqua";
 		ctx.fill();
+		// ctx.stroke();
 	
 		laser.y -= 10;
 		if(laser.y + lHeight <= 0) {
@@ -127,6 +133,7 @@ function updateEnemies() {
 		ctx.rect(enemy.x, enemy.y, eWidth, eHeight);
 		ctx.fillStyle = "red";
 		ctx.fill();
+		ctx.stroke();
 
 		enemy.y += eSpeed;
 
@@ -153,6 +160,28 @@ function checkLaserCollision() {
 
 				deadEnemies.push(enemy);
 				collidedLasers.push(laser);
+
+				plus100s.push(
+					{
+						'x' : enemy.x + (eWidth / 2), 
+						'y' : enemy.y + eHeight / 2 + 10, 
+						'max' : enemy.y - 50
+					});
+
+				particleSize = eWidth / 3;
+
+				// coordinates of 4 squares representing enemy exploding
+				explosions.push (
+					{
+						'xs' : [enemy.x, enemy.x + particleSize, enemy.x + (particleSize * 2), 
+								enemy.x, enemy.x + (particleSize * 2),
+								enemy.x, enemy.x + particleSize, enemy.x + (particleSize * 2)],
+						'ys' : [enemy.y, enemy.y, enemy.y,
+								enemy.y + particleSize, enemy.y + particleSize,
+								enemy.y + (particleSize * 2), enemy.y + (particleSize * 2), enemy.y + (particleSize * 2)],
+						'max' : enemy.x - 40
+					});
+
 				score += 100;
 			}
 		}
@@ -171,6 +200,96 @@ function checkPlayerEnemyCollision() {
 			&& enemy.x + eWidth >= px) {
 
 			gameOver = true;
+		}
+	}
+}
+
+function drawExplosions() {
+	var explosionsToRemove = [];
+
+	for(var i = 0; i < explosions.length; i++) {
+		explosion = explosions[i];
+
+		explosion.xs[0] -= 3;
+		explosion.ys[0] -= 3;
+
+		explosion.xs[1] += 0;
+		explosion.ys[1] -= 2;
+
+		explosion.xs[2] += 3;
+		explosion.ys[2] -= 3;
+
+		explosion.xs[3] -= 2;
+		explosion.ys[3] += 0;
+
+		explosion.xs[4] += 2;
+		explosion.ys[4] += 0;
+
+		explosion.xs[5] -= 3;
+		explosion.ys[5] += 3;
+
+		explosion.xs[6] += 0;
+		explosion.ys[6] += 2;
+
+		explosion.xs[7] += 3;
+		explosion.ys[7] += 3;
+
+		// draw all explosion pieces
+		for(var j = 0; j < explosion.xs.length; j++) {
+			ctx.beginPath();
+			ctx.rect(explosion.xs[j], explosion.ys[j], eWidth / 3, eHeight / 3);
+			ctx.fillStyle = colors[j % colors.length];
+			ctx.fill();
+			ctx.stroke();
+		}
+
+		if(explosion.xs[0] <= explosion.max) {
+			explosionsToRemove.push(explosion);
+		}
+	}
+
+	removeExplosion(explosionsToRemove);
+}
+
+function removeExplosion(explosionsToRemove) {
+	for(var i = 0; i < explosionsToRemove.length; i++) {
+		explosion = explosionsToRemove[i];
+		index = explosions.indexOf(explosion);
+
+		if (index > -1) {
+			explosions.splice(index, 1);
+		}
+	}
+}
+
+function drawPlus100() {
+	var itemsToRemove = [];
+
+	for(var i = 0; i < plus100s.length; i++) {
+		var plus100 = plus100s[i];
+
+		ctx.font = "15px Sans-Serif";
+		ctx.fillStyle = "white";
+		ctx.textAlign = "center";
+		ctx.fillText("+100", plus100.x, plus100.y);
+
+		plus100.y -= 1;
+
+		if(plus100.y <= plus100.max) {
+			itemsToRemove.push(plus100);
+		}
+	}
+
+	removePlus100s(itemsToRemove);
+}
+
+function removePlus100s(itemsToRemove) {
+	for(var i = 0; i < itemsToRemove.length; i++) {
+		plus100 = itemsToRemove[i];
+		index = plus100s.indexOf(plus100);
+
+		if (index > -1) {
+			plus100s.splice(index, 1);
 		}
 	}
 }
@@ -220,6 +339,8 @@ function draw() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	
 	checkLaserCollision();
+	drawPlus100();
+	drawExplosions();
 	checkPlayerEnemyCollision();
 	drawPlayer();
 	drawLasers();
